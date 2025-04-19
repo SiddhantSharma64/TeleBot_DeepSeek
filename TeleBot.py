@@ -42,7 +42,7 @@ async def welcome(message: types.Message):
     """
     This handler receives messages with `/start` or  `/help `command
     """
-    await message.reply("Hi\nI am Tele Bot!\Created by Bappy. How can i assist you?")
+    await message.reply("Hi\nI am Luci Bot!\Created by Siddhant. How can i assist you?")
 
 
 
@@ -62,7 +62,7 @@ async def helper(message: types.Message):
     A handler to display the help menu.
     """
     help_command = """
-    Hi There, I'm chatGPT Telegram bot created by Bappy! Please follow these commands - 
+    Hi There, I'm chatGPT Telegram bot created by Siddhant! Please follow these commands - 
     /start - to start the conversation
     /clear - to clear the past conversation and context.
     /help - to get this help menu.
