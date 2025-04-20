@@ -1,95 +1,79 @@
-from dotenv import load_dotenv
+import asyncio
 import os
-from aiogram import Bot, Dispatcher, executor, types
-import openai
-import sys
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import Message
+from aiogram.filters import Command
+from dotenv import load_dotenv
+from openai import OpenAI
 
-
+# Store previous conversation
 class Reference:
-    '''
-    A class to store previously response from the chatGPT API
-    '''
-
-    def __init__(self) -> None:
+    def __init__(self):
         self.response = ""
-
-
-load_dotenv()
-openai.api_key = os.getenv("DeepSeek_API_KEY")  
 
 reference = Reference()
 
+# Load environment variables
+load_dotenv()
 TOKEN = os.getenv("TOKEN")
+API_KEY = os.getenv("DeepSeek_API_KEY")
 
-#model name
-MODEL_NAME = "DeepSeek V3 0324 (free)"
+client = OpenAI(
+    api_key=os.getenv("DeepSeek_API_KEY"),
+    base_url="https://openrouter.ai/api/v1"
+)
 
+# Model name
+MODEL_NAME = "deepseek/deepseek-chat-v3-0324:free"  
 
-# Initialize bot and dispatcher
+# Init bot and dispatcher
 bot = Bot(token=TOKEN)
-dispatcher = Dispatcher(bot)
+dp = Dispatcher()
 
 
-def clear_past():
-    """A function to clear the previous conversation and context.
-    """
+@dp.message(Command("start"))
+async def start_handler(message: Message):
+    await message.answer("Hi\nI am Luci Bot! Created by Siddhant. How can I assist you?")
+
+
+@dp.message(Command("clear"))
+async def clear_handler(message: Message):
     reference.response = ""
+    await message.answer("I've cleared the past conversation and context.")
 
 
+@dp.message(Command("help"))
+async def help_handler(message: Message):
+    help_text = """
+Hi There, I'm Luci Bot created by Siddhant! Please follow these commands:
+    
+/start - Start the conversation  
+/clear - Clear previous conversation and context  
+/help - Show this help menu  
 
-@dispatcher.message_handler(commands=['start'])
-async def welcome(message: types.Message):
-    """
-    This handler receives messages with `/start` or  `/help `command
-    """
-    await message.reply("Hi\nI am Luci Bot!\Created by Siddhant. How can i assist you?")
-
-
-
-@dispatcher.message_handler(commands=['clear'])
-async def clear(message: types.Message):
-    """
-    A handler to clear the previous conversation and context.
-    """
-    clear_past()
-    await message.reply("I've cleared the past conversation and context.")
+I hope this helps. 🙂
+"""
+    await message.answer(help_text)
 
 
-
-@dispatcher.message_handler(commands=['help'])
-async def helper(message: types.Message):
-    """
-    A handler to display the help menu.
-    """
-    help_command = """
-    Hi There, I'm chatGPT Telegram bot created by Siddhant! Please follow these commands - 
-    /start - to start the conversation
-    /clear - to clear the past conversation and context.
-    /help - to get this help menu.
-    I hope this helps. :)
-    """
-    await message.reply(help_command)
-
-
-
-@dispatcher.message_handler()
-async def chatgpt(message: types.Message):
-    """
-    A handler to process the user's input and generate a response using the chatGPT API.
-    """
-    print(f">>> USER: \n\t{message.text}")
-    response = openai.ChatCompletion.create(
-        model = MODEL_NAME,
-        messages = [
-            {"role": "assistant", "content": reference.response}, # role assistant
-            {"role": "user", "content": message.text} #our query 
+@dp.message()
+async def chatgpt_handler(message: Message):
+    print(f">>> USER: {message.text}")
+    response = client.chat.completions.create(
+        model=MODEL_NAME,
+        messages=[
+            {"role": "assistant", "content": reference.response},
+            {"role": "user", "content": message.text}
         ]
     )
-    reference.response = response['choices'][0]['message']['content']
-    print(f">>> chatGPT: \n\t{reference.response}")
-    await bot.send_message(chat_id = message.chat.id, text = reference.response)
+    reply = response.choices[0].message.content
+    reference.response = reply
+    print(f">>> Luci Bot: {reply}")
+    await message.answer(reply)
 
 
+async def main():
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    executor.start_polling(dispatcher, skip_updates=False)
+    asyncio.run(main())
